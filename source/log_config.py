@@ -4,7 +4,7 @@
 log_config.py contains a function for the standard configuration of the logging-module.
 Currently a logger for stdout-stream and a default for logging into files and stdout are configured.
 
-created:
+created: 30.06.2020
 author: kornel
 """
 
