@@ -11,19 +11,19 @@ author: kornel
 # IMPORTS
 # --------------------------------------------------------------------------------------------------
 
-# stamdard lib imports
-import os.path
+# standard lib imports
 import sqlite3
 import argparse
 import sys
+import logging
+import os.path
 
 # 3rd party imports
 import pandas as pd
 
 # project imports
 import parsearg_funcs
-from log_config import get_configured_logger
-logger = get_configured_logger('default', level='DEBUG')
+from log_config import config_logging
 
 # --------------------------------------------------------------------------------------------------
 # MAIN LOGIC
@@ -155,4 +155,11 @@ def main():
 
 
 if __name__ == '__main__':
+    # configure logging
+    config_logging(
+        os.path.join(os.path.dirname(__file__), './logging.json')
+    )
+    logger = logging.getLogger(__name__)
+    # call main routine
+    logger.info('Starting ETL-Pipeline...')
     main()

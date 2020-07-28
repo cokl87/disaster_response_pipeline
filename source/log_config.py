@@ -2,76 +2,47 @@
 
 """
 log_config.py contains a function for the standard configuration of the logging-module.
-Currently a logger for stdout-stream and a default for logging into files and stdout are configured.
 
 created: 30.06.2020
 author: kornel
 """
 
-import logging
-from logging.config import dictConfig
+import logging.config
 import os.path
+import json
 
 
-def get_configured_logger(name, filename=None, verbose=True):
+def config_logging(config_path='logging.json', default_level=logging.INFO,
+                   default_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"):
     """
-    function configures logging and returns the requested logger
+    loads logging configuration from json
 
-    Parameters:
-    -----------
-    name: str
-        name of the logger to be returned
-    filename: str
-        path of the file where the logging shall take place
-    verbose: bool
-        which formatter to use (verbose messages or taciturn)
+    Parameters
+    ----------
+    config_path: str
+        path of the json with logger-configuration
+    default_level: int
+        int representing logging-level of default logger (in case json can not be loaded)
+    default_format: str
+        logger-format-str of default logger (in case json can not be loaded)
 
-    Returns:
-    --------
-    logging.Logger
-
+    Returns
+    -------
+    None
     """
+    if os.path.exists(config_path):
+        with open(config_path, 'rt') as fin:
+            config = json.load(fin)
 
-    verbosity = 'verbose' if verbose else 'taciturn'
-    if not filename:
-        filename = os.path.join(os.getcwd(), 'log.txt')
+        # TODO: prepend a default-logdir to file-handlers with relative pathes
 
-    config_dict = {
-        'version': 1,
-        'formatters': {
-            'verbose': {'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        'datefmt': '%Y-%m-%d %H:%M:%S'},
-            'taciturn': {'format': '%(message)s'},
-        },
-        'handlers': {
-            'stdout': {
-                'level': 'DEBUG',
-                'formatter': verbosity,
-                'class': 'logging.StreamHandler',
-                'stream': 'ext://sys.stdout',
-            },
-            'file_handler': {
-                'level': 'WARNING',
-                'formatter': verbosity,
-                'filename': filename,
-                'mode': 'a',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'maxBytes': 102400,
-                'backupCount': 3
-            }
-        },
-        'loggers': {
-            'default': {
-                'level': 'INFO',
-                'handlers': ['stdout', 'file_handler'],
-            },
-            'stdout': {
-                'level': 'INFO',
-                'handlers': ['stdout']
-            },
-        },
-        'disable_existing_loggers': False
-    }
-
-    dictConfig(config_dict)
-    return logging.getLogger(name)
+        logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(
+            level=default_level,
+            format=default_format,
+        )
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            'logging config file "%s" not found. Logging runs with default logger', config_path
+        )
