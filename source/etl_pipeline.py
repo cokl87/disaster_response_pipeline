@@ -4,7 +4,7 @@
 etl_pipeline.py
 
 created: 12:38 - 23.07.20
-author: kornel 
+author: kornel
 """
 
 # --------------------------------------------------------------------------------------------------
@@ -21,6 +21,7 @@ import sys
 import pandas as pd
 
 # project imports
+import parsearg_funcs
 from log_config import get_configured_logger
 logger = get_configured_logger('default', level='DEBUG')
 
@@ -30,42 +31,29 @@ logger = get_configured_logger('default', level='DEBUG')
 
 
 def parse_args(args):
-    def check_csv(pth):
-        # norming path:
-        apth = os.path.abspath(pth)
-        # checking if existing file and correct filetype
-        if not os.path.isfile(apth):
-            err = '%s is not a path to an existing file' % apth
-            logger.error(err)
-            raise argparse.ArgumentTypeError(err)
-        if os.path.splitext(apth)[-1] != '.csv':
-            err = '%s is not a a valid csv-file' % apth
-            logger.error(err)
-            raise argparse.ArgumentTypeError(err)
-        logger.debug('transformed %s to %s' % (pth, apth))
-        return apth
+    """
+    functions where argument parser is defined and arguments are parsed
 
-    def check_inexisting_dir(pth):
-        # norming path:
-        pth = os.path.abspath(pth)
-        # checking if existing file and correct filetype
-        if not os.path.isdir(os.path.dirname(pth)):
-            err = '%s is not a valid path to an existing directory' % pth
-            logger.error(err)
-            raise argparse.ArgumentTypeError(err)
-        return pth
+    Parameters
+    ----------
+    args: list
+        list with arguments (e.g. from sys.argv)
+
+    Returns
+    -------
+    argparse.namespace
+    """
 
     description = '''
     ETL pipeline which extracts data from two csv-files, transform and cleans this 
     data and loads it in a database.
     '''
-
     parser = argparse.ArgumentParser(description)
-    parser.add_argument('csv1', metavar='messages.csv', type=check_csv,
+    parser.add_argument('csv1', metavar='messages.csv', type=parsearg_funcs.check_csv,
                         help='path to a csv-file with disaster messages')
-    parser.add_argument('csv2', type=check_csv, metavar='categories.csv',
+    parser.add_argument('csv2', type=parsearg_funcs.check_csv, metavar='categories.csv',
                         help='path to csv-file with categories')
-    parser.add_argument('db', type=check_inexisting_dir, metavar='database',
+    parser.add_argument('db', type=parsearg_funcs.check_dir_existing, metavar='database',
                         help='name of the sqlite3-database where transformed data will be stored')
     parser.add_argument('-t', '--table', nargs=1, dest='table', metavar='tablename',
                         type=str, default='categorized',
@@ -90,8 +78,8 @@ def transform_data(messages, categories):
         transformed data
     """
     logger.info('merging data of disaster messages to category data')
-    df = pd.merge(messages, categories, on='id')
-    categories = df.categories.str.split(';', expand=True)
+    data = pd.merge(messages, categories, on='id')
+    categories = data.categories.str.split(';', expand=True)
 
     # extract the category names:
     # select the first row of the categories dataframe
@@ -104,32 +92,32 @@ def transform_data(messages, categories):
     categories = categories.applymap(lambda x: int(x[-1]))
 
     # concatenate the original dataframe with the new `categories` dataframe
-    df.drop('categories', axis=1, inplace=True)
-    df = pd.concat([df, categories], axis=1)
+    data.drop('categories', axis=1, inplace=True)
+    data = pd.concat([data, categories], axis=1)
 
     # dropping duplicate data
-    return df.drop_duplicates(inplace=False)
+    return data.drop_duplicates(inplace=False)
 
 
 def extract_data(csv1, csv2):
     """
     extract routine which extract message and category data from two csv files
     """
-    logger.info('reading %s' % csv1)
+    logger.info('reading %s', csv1)
     messages = pd.read_csv(csv1)
 
-    logger.info('reading %s' % csv2)
+    logger.info('reading %s', csv2)
     categories = pd.read_csv(csv2)
     return messages, categories
 
 
-def load_df2db(df, db_name, table_name, if_exists='replace', use_index=False):
+def load_df2db(data, db_name, table_name, if_exists='replace', use_index=False):
     """
     writes dataframe into database
 
     Parameters
     ----------
-    df: pd.DataFrame
+    data: pd.DataFrame
     db_name: str
     table_name: str
     if_exists: {'replace', 'fail', 'append'}
@@ -143,7 +131,7 @@ def load_df2db(df, db_name, table_name, if_exists='replace', use_index=False):
     # create db-connection
     conn = sqlite3.connect(db_name)
     # write into db
-    df.to_sql(table_name, conn, if_exists=if_exists, index=use_index)
+    data.to_sql(table_name, conn, if_exists=if_exists, index=use_index)
     # save (commit) the changes and close db-connection
     conn.commit()
     conn.close()
