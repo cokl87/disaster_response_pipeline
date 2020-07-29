@@ -25,9 +25,26 @@ import pandas as pd
 import parsearg_funcs
 from log_config import config_logging
 
+
 # --------------------------------------------------------------------------------------------------
 # MAIN LOGIC
 # --------------------------------------------------------------------------------------------------
+
+def main():
+    """ main routine of script """
+    logger.info(__file__)
+
+    logger.info('parsing arguments...')
+    args = parse_args(sys.argv[1:])
+
+    logger.info('reading data...')
+    messages, categories = extract_data(args.csv1, args.csv2)
+
+    logger.info('transforming data...')
+    data = transform_data(messages, categories)
+
+    logger.info('loading data into database "%s"' % args.db)
+    load_df2db(data, args.db, args.table)
 
 
 def parse_args(args):
@@ -135,23 +152,6 @@ def load_df2db(data, db_name, table_name, if_exists='replace', use_index=False):
     # save (commit) the changes and close db-connection
     conn.commit()
     conn.close()
-
-
-def main():
-    """ main routine of script """
-    logger.info(__file__)
-
-    logger.info('parsing arguments...')
-    args = parse_args(sys.argv[1:])
-
-    logger.info('reading data...')
-    messages, categories = extract_data(args.csv1, args.csv2)
-
-    logger.info('transforming data...')
-    data = transform_data(messages, categories)
-
-    logger.info('loading data into database...')
-    load_df2db(data, args.db, args.table)
 
 
 if __name__ == '__main__':

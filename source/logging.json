@@ -27,7 +27,7 @@
   },
   "loggers": {
     "__main__":{
-      "level": "INFO",
+      "level": "DEBUG",
       "handlers": ["console", "file_handler"],
       "propagate": false
     }
