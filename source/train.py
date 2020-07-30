@@ -155,7 +155,7 @@ def lemmatize(text):
     return [lmtzer.lemmatize(word, pos=get_wordnet_pos(pos)) for word, pos in wordpos]
 
 
-class Extractor(BaseEstimator, TransformerMixin):
+class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
     def fit(self, x, y):
         return self
 
@@ -180,36 +180,44 @@ def build_model():
     pipeline = Pipeline([
         ('feature_prep', FeatureUnion([
             ('msg_pipeline', Pipeline([
-                ('countvec', CountVectorizer(tokenizer=lemmatize)),
+                ('countvec', CountVectorizer(
+                    max_df=0.95, max_features=10000, min_df=1, tokenizer=stem)),
                 ('tfidf', TfidfTransformer()),
             ])),
-            ('ext', Extractor()),
+            ('ext', VerbAtStartExtractor()),
         ])),
         ('clf', MultiOutputClassifier(RandomForestClassifier())),
     ])
 
     parameters = {
-        'feature_prep__msg_pipeline__countvec__tokenizer': (lemmatize, stem),
+        #'feature_prep__msg_pipeline__countvec__tokenizer': (lemmatize, stem),
         #'feature_prep__msg_pipeline__countvec__ngram_range': ((1, 1), (1, 2)),
-        'feature_prep__msg_pipeline__countvec__max_df': (0.5, 0.75, 1.0),
-        'feature_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
+        #'feature_prep__msg_pipeline__countvec__max_df': (0.5, 0.75, 1.0),
+        #'feature_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
         #'feature_prep__msg_pipeline__tfidf__use_idf': (True, False),
         #'clf__estimator__n_estimators': [80, 100],
         #'clf__estimator__min_samples_split': [2, 3, 4],
         'feature_prep__transformer_weights': (
             {'msg_pipeline': 1, 'ext': 0.5},
             {'msg_pipeline': 0.5, 'ext': 1},
+            {'msg_pipeline': 1, 'ext': 1},
             #{'msg_pipeline': 0.8, 'ext': 1},
             #{'msg_pipeline': 1, 'ext': 0.8},
         )
     }
     logger.debug('\n'.join(pipeline.get_params().keys()))
-    cv = GridSearchCV(pipeline, param_grid=parameters, error_score=nan, verbose=10, n_jobs=-1)
+    cv = GridSearchCV(pipeline, param_grid=parameters, error_score=nan, verbose=10, n_jobs=1)
     return cv
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
-    logger.info('optimal parameters: %s' % model.best_params_)
+def evaluate_model(model, X_test, y_test, category_names):
+    logger.info('optimal parameters: %s; score: %s' % (model.best_params_, model.best_score_))
+    y_pred = model.predict(X_test)
+    pred_col_list = y_pred.transpose()
+    for idx, (name, vals) in enumerate(y_test.iteritems()):
+        logger.info(
+            '%s:\n' % name, classification_report(vals, pred_col_list[idx], labels=category_names)
+        )
 
 
 def save_model(model, mod_pth):
@@ -224,5 +232,5 @@ if __name__ == '__main__':
     )
     logger = logging.getLogger(__name__)
     # call main routine
-    logger.info('Starting ETL-Pipeline...')
+    logger.info('Starting NLP-ML-Pipeline...')
     main()
