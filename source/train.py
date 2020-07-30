@@ -38,12 +38,10 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import classification_report  # confusion_matrix
 
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
 
 # project imports
 import parsearg_funcs
@@ -111,6 +109,23 @@ def parse_args(args):
 
 
 def load_data(db_pth, table):
+    """
+    loads data from a sqlite3-database
+
+    Parameters
+    ----------
+    db_pth: str
+        path to the sqlite3-database
+    table: str
+        name of the table to load
+
+    Returns
+    -------
+    text-messages: pandas.DataFrame
+    categories: pandas.DataFrame
+    category-names: numpy.array
+
+    """
     con = sqlite3.connect(db_pth)
     df = pd.read_sql_query("SELECT * FROM %s" % table, con)
     con.close()
@@ -121,6 +136,7 @@ def load_data(db_pth, table):
 
 
 def tokenize(text):
+    """ tokenizes, norms and removes punctuation from english text-messages """
     # norm and tokenize
     normed = re.sub('[^a-zA-Z0-9]', ' ', text.lower())
     tokens = word_tokenize(normed)
@@ -131,11 +147,13 @@ def tokenize(text):
 
 
 def stem(text):
+    """ transformes english messages to their stemed-form """
     ps = PorterStemmer()
     return [ps.stem(word) for word in tokenize(text)]
 
 
 def lemmatize(text):
+    """ tokenize and lemmatize english messages """
     def get_wordnet_pos(treebank_tag):
         if treebank_tag.startswith('J'):
             return wordnet.ADJ
@@ -156,10 +174,26 @@ def lemmatize(text):
 
 
 class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
+    """
+    Class that preprocess text-messages for usage in a ml-pipeline. Checks if in any sentence a
+    verb is at first possition.
+    """
     def fit(self, x, y):
+        """ implementation of fit """
         return self
 
     def starting_verb(self, text):
+        """
+        checks if in text a verb is at first possition.
+
+        Parameters
+        ----------
+        text: str
+
+        Returns
+        -------
+        bool
+        """
         sentence_list = nltk.sent_tokenize(text)
         for sentence in sentence_list:
             pos_tags = nltk.pos_tag(tokenize(sentence))
@@ -172,11 +206,19 @@ class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
         return False
 
     def transform(self, X):
+        """ implementation of transform-method. Applies starting-verb on Data """
         X_tagged = pd.Series(X).apply(self.starting_verb)
         return pd.DataFrame(X_tagged)
 
 
 def build_model():
+    """
+    builds a nlp- and ml-pipeline which classifies disaster-response messages to disaster-categories
+
+    Returns
+    -------
+    sklearn.model_selection.GridSearchCV
+    """
     pipeline = Pipeline([
         ('feature_prep', FeatureUnion([
             ('msg_pipeline', Pipeline([
@@ -211,6 +253,10 @@ def build_model():
 
 
 def evaluate_model(model, X_test, y_test, category_names):
+    """
+    evaluates model by calulation of f1-score, precisions and recall-rates of the different classes.
+    Results will be logged.
+    """
     logger.info('optimal parameters: %s; score: %s' % (model.best_params_, model.best_score_))
     y_pred = model.predict(X_test)
     pred_col_list = y_pred.transpose()
@@ -221,6 +267,7 @@ def evaluate_model(model, X_test, y_test, category_names):
 
 
 def save_model(model, mod_pth):
+    """ saves model as pickle for later usage """
     with open(mod_pth, 'wb') as fout:
         pickle.dump(model, fout)
 
