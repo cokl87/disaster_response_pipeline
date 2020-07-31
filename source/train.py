@@ -4,7 +4,7 @@
 train.py
 
 created: 15:03 - 28.07.20
-author: kornel 
+author: kornel
 """
 
 # --------------------------------------------------------------------------------------------------
@@ -29,10 +29,6 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords, wordnet
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.stem import PorterStemmer
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -47,6 +43,11 @@ from sklearn.ensemble import RandomForestClassifier
 import parsearg_funcs
 from log_config import config_logging
 
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('wordnet')
+
 
 # --------------------------------------------------------------------------------------------------
 # MAIN LOGIC
@@ -59,20 +60,20 @@ def main():
     logger.info('parsing arguments...')
     args = parse_args(sys.argv[1:])
 
-    logger.info('Loading data from database: "%s.%s"' % (args.db, args.table))
+    logger.info('Loading data from database: "%s.%s"', args.db, args.table)
     parameters, categories, category_names = load_data(args.db, args.table)
-    X_train, X_test, Y_train, Y_test = train_test_split(parameters, categories, test_size=0.2)
+    x_train, x_test, y_train, y_test = train_test_split(parameters, categories, test_size=0.2)
 
     logger.info('Building model...')
     model = build_model()
 
     logger.info('Training model andfinding best parameter set...')
-    model.fit(X_train, Y_train)
+    model.fit(x_train, y_train)
 
     logger.info('Evaluating model...')
-    evaluate_model(model, X_test, Y_test, category_names)
+    evaluate_model(model, x_test, y_test, category_names)
 
-    logger.info('Saving model on: "%s"' % args.model)
+    logger.info('Saving model on: "%s"', args.model)
     save_model(model, args.model)
 
 
@@ -127,11 +128,11 @@ def load_data(db_pth, table):
 
     """
     con = sqlite3.connect(db_pth)
-    df = pd.read_sql_query("SELECT * FROM %s" % table, con)
+    data = pd.read_sql_query("SELECT * FROM %s" % table, con)
     con.close()
 
-    parameters = df.message
-    categories = df.drop(['id', 'message', 'original', 'genre'], axis=1)
+    parameters = data.message
+    categories = data.drop(['id', 'message', 'original', 'genre'], axis=1)
     return parameters, categories, categories.columns.values
 
 
@@ -148,8 +149,8 @@ def tokenize(text):
 
 def stem(text):
     """ transformes english messages to their stemed-form """
-    ps = PorterStemmer()
-    return [ps.stem(word) for word in tokenize(text)]
+    post = PorterStemmer()
+    return [post.stem(word) for word in tokenize(text)]
 
 
 def lemmatize(text):
@@ -157,15 +158,15 @@ def lemmatize(text):
     def get_wordnet_pos(treebank_tag):
         if treebank_tag.startswith('J'):
             return wordnet.ADJ
-        elif treebank_tag.startswith('V'):
+        if treebank_tag.startswith('V'):
             return wordnet.VERB
-        elif treebank_tag.startswith('N'):
+        if treebank_tag.startswith('N'):
             return wordnet.NOUN
-        elif treebank_tag.startswith('R'):
+        if treebank_tag.startswith('R'):
             return wordnet.ADV
         # try to transfer to Noun else
-        else:
-            return wordnet.NOUN
+        # else:
+        return wordnet.NOUN
 
     # lemmatize
     wordpos = nltk.pos_tag(tokenize(text))
@@ -182,7 +183,8 @@ class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
         """ implementation of fit """
         return self
 
-    def starting_verb(self, text):
+    @staticmethod
+    def starting_verb(text):
         """
         checks if in text a verb is at first possition.
 
@@ -205,10 +207,10 @@ class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
                 return True
         return False
 
-    def transform(self, X):
+    def transform(self, data):
         """ implementation of transform-method. Applies starting-verb on Data """
-        X_tagged = pd.Series(X).apply(self.starting_verb)
-        return pd.DataFrame(X_tagged)
+        x_tagged = pd.Series(data).apply(self.starting_verb)
+        return pd.DataFrame(x_tagged)
 
 
 def build_model():
@@ -241,7 +243,7 @@ def build_model():
         #'clf__estimator__min_samples_split': [2, 3, 4],
         'feature_prep__transformer_weights': (
             {'msg_pipeline': 1, 'ext': 0.5},
-            {'msg_pipeline': 0.5, 'ext': 1},
+            {'msg_pipeline': 0.5, 'ext': 0.2},
             {'msg_pipeline': 1, 'ext': 1},
             #{'msg_pipeline': 0.8, 'ext': 1},
             #{'msg_pipeline': 1, 'ext': 0.8},
@@ -252,17 +254,17 @@ def build_model():
     return cv
 
 
-def evaluate_model(model, X_test, y_test, category_names):
+def evaluate_model(model, x_test, y_test, category_names):
     """
     evaluates model by calulation of f1-score, precisions and recall-rates of the different classes.
     Results will be logged.
     """
-    logger.info('optimal parameters: %s; score: %s' % (model.best_params_, model.best_score_))
-    y_pred = model.predict(X_test)
+    logger.info('optimal parameters: %s; score: %s', model.best_params_, model.best_score_)
+    y_pred = model.predict(x_test)
     pred_col_list = y_pred.transpose()
     for idx, (name, vals) in enumerate(y_test.iteritems()):
         logger.info(
-            '%s:\n' % name, classification_report(vals, pred_col_list[idx], labels=category_names)
+            '%s:\n%s', name, classification_report(vals, pred_col_list[idx], labels=category_names)
         )
 
 
