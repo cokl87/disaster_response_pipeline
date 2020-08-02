@@ -74,7 +74,7 @@ def main():
     evaluate_model(model, x_test, y_test, category_names)
 
     logger.info('Saving model on: "%s"', args.model)
-    save_model(model, args.model)
+    save_model(model.best_estimator_, args.model)
 
 
 def parse_args(args):
@@ -109,7 +109,7 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def load_data(db_pth, table):
+def load_data(db_pth, table, split=True):
     """
     loads data from a sqlite3-database
 
@@ -119,6 +119,8 @@ def load_data(db_pth, table):
         path to the sqlite3-database
     table: str
         name of the table to load
+    split: bool
+        return table as is or split in parameters and categories
 
     Returns
     -------
@@ -130,6 +132,8 @@ def load_data(db_pth, table):
     con = sqlite3.connect(db_pth)
     data = pd.read_sql_query("SELECT * FROM %s" % table, con)
     con.close()
+    if not split:
+        return data
 
     parameters = data.message
     categories = data.drop(['id', 'message', 'original', 'genre'], axis=1)
@@ -229,7 +233,7 @@ def build_model():
                 ('tfidf', TfidfTransformer()),
             ])),
             ('ext', VerbAtStartExtractor()),
-        ])),
+        ], transformer_weights={'msg_pipeline': 1, 'ext': 0.5})),
         ('clf', MultiOutputClassifier(RandomForestClassifier())),
     ])
 
@@ -239,15 +243,15 @@ def build_model():
         #'feature_prep__msg_pipeline__countvec__max_df': (0.5, 0.75, 1.0),
         #'feature_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
         #'feature_prep__msg_pipeline__tfidf__use_idf': (True, False),
-        #'clf__estimator__n_estimators': [80, 100],
+        'clf__estimator__n_estimators': [80, 100],
         #'clf__estimator__min_samples_split': [2, 3, 4],
-        'feature_prep__transformer_weights': (
-            {'msg_pipeline': 1, 'ext': 0.5},
-            {'msg_pipeline': 0.5, 'ext': 0.2},
-            {'msg_pipeline': 1, 'ext': 1},
+        #'feature_prep__transformer_weights': (
+            #{'msg_pipeline': 1, 'ext': 0.5},
+            #{'msg_pipeline': 0.5, 'ext': 0.2},
+            #{'msg_pipeline': 1, 'ext': 1},
             #{'msg_pipeline': 0.8, 'ext': 1},
             #{'msg_pipeline': 1, 'ext': 0.8},
-        )
+        #)
     }
     logger.debug('\n'.join(pipeline.get_params().keys()))
     cv = GridSearchCV(pipeline, param_grid=parameters, error_score=nan, verbose=10, n_jobs=1)
@@ -264,7 +268,7 @@ def evaluate_model(model, x_test, y_test, category_names):
     pred_col_list = y_pred.transpose()
     for idx, (name, vals) in enumerate(y_test.iteritems()):
         logger.info(
-            '%s:\n%s', name, classification_report(vals, pred_col_list[idx], labels=category_names)
+            '%s:\n%s', name, classification_report(vals, pred_col_list[idx])
         )
 
 
