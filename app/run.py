@@ -1,36 +1,49 @@
+# -*- coding: utf-8 -*-
+
+"""
+run.py script for running flask-app
+"""
+
+# --------------------------------------------------------------------------------------------------
+# IMPORTS
+# --------------------------------------------------------------------------------------------------
+
+# stamdard lib imports
 import json
+import os.path
+import sys
+
+# 3rd party imports
 import plotly
 import pandas as pd
-
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
 
 from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
-from sklearn.externals import joblib
-from sqlalchemy import create_engine
+import joblib
 
+# project imports
+sys.path.append('../source')
+from train import load_data, tokenize, stem, lemmatize, VerbAtStartExtractor
+from train import VerbAtStartExtractor as Extractor
+
+
+# --------------------------------------------------------------------------------------------------
+# MAIN LOGIC
+# --------------------------------------------------------------------------------------------------
+
+# constants
+DB = '../data/data.db'
+TABLE_NAME = 'categorized'
 
 app = Flask(__name__)
 
-def tokenize(text):
-    tokens = word_tokenize(text)
-    lemmatizer = WordNetLemmatizer()
-
-    clean_tokens = []
-    for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
-
-    return clean_tokens
-
 # load data
-engine = create_engine('sqlite:///../data/YourDatabaseName.db')
-df = pd.read_sql_table('YourTableName', engine)
+msgs, cats, cat_names = load_data(DB, TABLE_NAME)
+df = pd.concat([msgs, cats], axis=1)
 
 # load model
-model = joblib.load("../models/your_model_name.pkl")
+model = joblib.load("../models/model.pkl")
 
 
 # index webpage displays cool visuals and receives user input text for model
