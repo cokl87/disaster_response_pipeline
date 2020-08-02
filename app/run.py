@@ -12,6 +12,7 @@ run.py script for running flask-app
 import json
 import os.path
 import sys
+import logging
 
 # 3rd party imports
 import plotly
@@ -24,6 +25,7 @@ import joblib
 
 # project imports
 sys.path.append('../source')
+from log_config import config_logging
 from train import load_data, tokenize, stem, lemmatize, VerbAtStartExtractor
 from train import VerbAtStartExtractor as Extractor
 
@@ -106,8 +108,16 @@ def go():
 
 
 def main():
+    """ main routine """
     app.run(host='0.0.0.0', port=3001, debug=True)
 
 
 if __name__ == '__main__':
+    # configure logging
+    config_logging(
+        os.path.join(os.path.dirname(__file__), '../source/logging.json')
+    )
+    logger = logging.getLogger(__name__)
+    # call main routine
+    logger.info('Starting web-app...')
     main()
