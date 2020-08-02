@@ -20,7 +20,7 @@ import pandas as pd
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Pie, Bar
 import joblib
 
 # project imports
@@ -41,8 +41,7 @@ TABLE_NAME = 'categorized'
 app = Flask(__name__)
 
 # load data
-msgs, cats, cat_names = load_data(DB, TABLE_NAME)
-df = pd.concat([msgs, cats], axis=1)
+df = load_data(DB, TABLE_NAME, split=False)
 
 # load model
 model = joblib.load("../models/model.pkl")
@@ -54,21 +53,20 @@ model = joblib.load("../models/model.pkl")
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    genre_df = df.groupby('genre').count().reset_index('genre')
+
+    categories = df.drop(['id', 'message', 'original', 'genre'], axis=1)
+    csums = (categories.sum()*100 / categories.shape[0]).sort_values(ascending=False)
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
-                Bar(
-                    x=genre_names,
-                    y=genre_counts
+                Pie(
+                    values=genre_df['message'],
+                    labels=genre_df['genre'],
                 )
             ],
-
             'layout': {
                 'title': 'Distribution of Message Genres',
                 'yaxis': {
@@ -78,7 +76,25 @@ def index():
                     'title': "Genre"
                 }
             }
-        }
+        },
+        {
+            'data': [
+                Bar(
+                    y=list(csums.values),
+                    x=[label.replace('_', ' ') for label in csums.index],
+                )
+            ],
+            'layout': {
+                'title': 'Categories of messages sorted by frequency',
+                'yaxis': {
+                    'title': "Percent of messages with category"
+                },
+                'xaxis': {
+                    'title': "Category",
+                    'tickangle': 30,
+                },
+            }
+        },
     ]
     
     # encode plotly graphs in JSON
