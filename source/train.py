@@ -283,31 +283,36 @@ def build_model():
     """
     pipeline = Pipeline([
         ('feature_prep', FeatureUnion([
-            ('msg_pipeline', Pipeline([
+            ('msg_pipeline1', Pipeline([
+                ('countvec', CountVectorizer(
+                    max_df=0.95, max_features=10000, min_df=1, tokenizer=lemmatize)),
+                ('tfidf', TfidfTransformer()),
+            ])),
+            ('msg_pipeline2', Pipeline([
                 ('countvec', CountVectorizer(
                     max_df=0.95, max_features=10000, min_df=1, tokenizer=stem)),
                 ('tfidf', TfidfTransformer()),
             ])),
             ('ext', VerbAtStartExtractor()),
-        ], transformer_weights={'msg_pipeline': 1, 'ext': 0.5})),
+        ], transformer_weights={'msg_pipeline1': 1, 'ext': 0.5, 'msg_pipeline2': 1})),
         ('clf', MultiOutputClassifier(RandomForestClassifier())),
     ])
 
     parameters = {
-        #'feature_prep__msg_pipeline__countvec__tokenizer': (lemmatize, stem),
-        #'feature_prep__msg_pipeline__countvec__ngram_range': ((1, 1), (1, 2)),
-        #'feature_prep__msg_pipeline__countvec__max_df': (0.5, 0.75, 1.0),
-        #'featur#e_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
-        #'feature_prep__msg_pipeline__tfidf__use_idf': (True, False),
-        'clf__estimator__n_estimators': [80, 100],
+        #'feature_prep__msg_pipeline1__countvec__ngram_range': ((1, 1), (1, 2)),
+        #'feature_prep__msg_pipeline1__countvec__max_df': (0.5, 0.75, 1.0),
+        #'feature_prep__msg_pipeline1__countvec__max_features': (None, 5000, 10000),
+        #'feature_prep__msg_pipeline1__tfidf__use_idf': (True, False),
+        #'clf__estimator__n_estimators': [100, 120],
         #'clf__estimator__min_samples_split': [2, 3, 4],
-        #'feature_prep__transformer_weights': (
-            #{'msg_pipeline': 1, 'ext': 0.5},
-            #{'msg_pipeline': 0.5, 'ext': 0.2},
-            #{'msg_pipeline': 1, 'ext': 1},
-            #{'msg_pipeline': 0.8, 'ext': 1},
-            #{'msg_pipeline': 1, 'ext': 0.8},
-        #)
+        'feature_prep__transformer_weights': (
+            #{'msg_pipeline1': 1, 'ext': 0.5, 'msg_pipeline2': 0},
+            {'msg_pipeline1': 1, 'ext': 0.5, 'msg_pipeline2': 1},
+            {'msg_pipeline1': 1, 'ext': 0.2, 'msg_pipeline2': 0.5},
+            {'msg_pipeline1': 1, 'ext': 0.5, 'msg_pipeline2': 0.75},
+            #{'msg_pipeline1': 0.8, 'ext': 1, 'msg_pipeline2': 1},
+            #{'msg_pipeline1': 1, 'ext': 0.8, 'msg_pipeline2': 1},
+        )
     }
     logger.debug('\n'.join(pipeline.get_params().keys()))
     cv = GridSearchCV(pipeline, param_grid=parameters, error_score=nan, verbose=10, n_jobs=1)
