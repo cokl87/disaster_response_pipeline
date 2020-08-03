@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-train.py
+train.py - NLP and ML pipeline which trains a predictor on data loaded in a database.
 
 created: 15:03 - 28.07.20
 author: kornel
@@ -90,10 +90,8 @@ def parse_args(args):
     -------
     argparse.namespace
     """
+    description = __doc__.strip().split('\n\n')[0]
 
-    description = '''
-    NLP and ML pipeline which trains a predictor on data loaded in a database.
-    '''
     parser = argparse.ArgumentParser(description)
     parser.add_argument(
         'db', type=parsearg_funcs.check_sqlite3, metavar='database',
@@ -141,7 +139,19 @@ def load_data(db_pth, table, split=True):
 
 
 def tokenize(text):
-    """ tokenizes, norms and removes punctuation from english text-messages """
+    """
+    tokenizes, norms and removes punctuation and stopwords from english text-messages.
+
+    Parameters
+    ----------
+    text: str
+        text-message to be tokenized
+
+    Returns
+    -------
+    cleaned: list
+        list with tokenized words.
+    """
     # norm and tokenize
     normed = re.sub('[^a-zA-Z0-9]', ' ', text.lower())
     tokens = word_tokenize(normed)
@@ -152,13 +162,37 @@ def tokenize(text):
 
 
 def stem(text):
-    """ transformes english messages to their stemed-form """
+    """
+    transforms english messages to their stemmed-form.
+
+    Parameters
+    ----------
+    text: str
+        text messages to be stemmed
+
+    Returns
+    -------
+    list
+        list of stemmed words
+    """
     post = PorterStemmer()
     return [post.stem(word) for word in tokenize(text)]
 
 
 def lemmatize(text):
-    """ tokenize and lemmatize english messages """
+    """
+    tokenize and lemmatize english messages
+
+    Parameters
+    ----------
+    text: str
+        text messages to be lemmatized
+
+    Returns
+    -------
+    list
+        list with lemmatized forms of words
+    """
     def get_wordnet_pos(treebank_tag):
         if treebank_tag.startswith('J'):
             return wordnet.ADJ
@@ -182,6 +216,15 @@ class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
     """
     Class that preprocess text-messages for usage in a ml-pipeline. Checks if in any sentence a
     verb is at first possition.
+
+    Attributes
+    ----------
+
+    Methods
+    -------
+    fit
+    starting_verb
+    transform
     """
     def fit(self, x, y):
         """ implementation of fit """
@@ -212,7 +255,20 @@ class VerbAtStartExtractor(BaseEstimator, TransformerMixin):
         return False
 
     def transform(self, data):
-        """ implementation of transform-method. Applies starting-verb on Data """
+        """
+        implementation of transform-method. Applies starting-verb on Data and returns a DataFrame
+        with boolean data whether a message contains a sentence with a verb at first possition.
+
+        Parameters
+        ----------
+        data: iterable
+            iterable with text-messages to be analysed
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with boolean values
+        """
         x_tagged = pd.Series(data).apply(self.starting_verb)
         return pd.DataFrame(x_tagged)
 
@@ -241,7 +297,7 @@ def build_model():
         #'feature_prep__msg_pipeline__countvec__tokenizer': (lemmatize, stem),
         #'feature_prep__msg_pipeline__countvec__ngram_range': ((1, 1), (1, 2)),
         #'feature_prep__msg_pipeline__countvec__max_df': (0.5, 0.75, 1.0),
-        #'feature_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
+        #'featur#e_prep__msg_pipeline__countvec__max_features': (None, 5000, 10000),
         #'feature_prep__msg_pipeline__tfidf__use_idf': (True, False),
         'clf__estimator__n_estimators': [80, 100],
         #'clf__estimator__min_samples_split': [2, 3, 4],
@@ -262,6 +318,20 @@ def evaluate_model(model, x_test, y_test, category_names):
     """
     evaluates model by calulation of f1-score, precisions and recall-rates of the different classes.
     Results will be logged.
+
+    Parameters
+    ----------
+    model: sklearn.base.BaseEstimator
+        trained model to be evaluated
+    x_test: array-like, shape (n_samples, n_features)
+        parameters (disaster-messages) of test-data
+    y_test: array, shape (n_samples,)
+        categories of test-data
+    category_names: iterable
+
+    Returns
+    -------
+    None
     """
     logger.info('optimal parameters: %s; score: %s', model.best_params_, model.best_score_)
     y_pred = model.predict(x_test)
@@ -273,7 +343,19 @@ def evaluate_model(model, x_test, y_test, category_names):
 
 
 def save_model(model, mod_pth):
-    """ saves model as pickle for later usage """
+    """
+     saves model as pickle for later usage
+
+    Parameters
+    ----------
+    model: sklearn.base.BaseEstimator
+    mod_pth: str
+        output-path
+
+    Returns
+    -------
+    None
+    """
     with open(mod_pth, 'wb') as fout:
         pickle.dump(model, fout)
 

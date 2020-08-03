@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-etl_pipeline.py
+etl_pipeline.py - ETL pipeline which extracts data from two csv-files, transform and cleans this
+data and loads it in a database.
 
 created: 12:38 - 23.07.20
 author: kornel
@@ -60,11 +61,7 @@ def parse_args(args):
     -------
     argparse.namespace
     """
-
-    description = '''
-    ETL pipeline which extracts data from two csv-files, transform and cleans this 
-    data and loads it in a database.
-    '''
+    description = description = __doc__.strip().split('\n\n')[0]
     parser = argparse.ArgumentParser(description)
     parser.add_argument('csv1', metavar='messages.csv', type=parsearg_funcs.check_csv,
                         help='path to a csv-file with disaster messages')
@@ -119,6 +116,20 @@ def transform_data(messages, categories):
 def extract_data(csv1, csv2):
     """
     extract routine which extract message and category data from two csv files
+
+    Parameters
+    ----------
+    csv1: str
+        pth to csv with text of disaster-messages
+    csv2: str
+        pth to csv with text of disaster-categories
+
+    Returns
+    -------
+    pandas.DataFrame
+        containing content csv-content with messages-text
+    pandas.DataFrame
+        containing content of csv with message-categories
     """
     logger.info('reading %s', csv1)
     messages = pd.read_csv(csv1)
