@@ -19,7 +19,7 @@ import plotly
 import pandas as pd
 
 from flask import Flask
-from flask import render_template, request, jsonify
+from flask import render_template, request
 from plotly.graph_objs import Pie, Bar
 import joblib
 
@@ -27,24 +27,31 @@ import joblib
 sys.path.append('../source')
 from log_config import config_logging
 from train import load_data, tokenize, stem, lemmatize, VerbAtStartExtractor
-from train import VerbAtStartExtractor as Extractor
+
+
+# --------------------------------------------------------------------------------------------------
+# CONSTANTS
+# --------------------------------------------------------------------------------------------------
+
+DB_PTH = '../data/data.db'
+TABLE_NAME = 'categorized'
+MODEL_PTH = '../models/model.pkl'
+DEBUG = False
+HOST = '0.0.0.0'
+PORT = 3001
 
 
 # --------------------------------------------------------------------------------------------------
 # MAIN LOGIC
 # --------------------------------------------------------------------------------------------------
 
-# constants
-DB = '../data/data.db'
-TABLE_NAME = 'categorized'
-
 app = Flask(__name__)
 
 # load data
-df = load_data(DB, TABLE_NAME, split=False)
+df = load_data(DB_PTH, TABLE_NAME, split=False)
 
 # load model
-model = joblib.load("../models/model.pkl")
+model = joblib.load(MODEL_PTH)
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -125,7 +132,7 @@ def go():
 
 def main():
     """ main routine """
-    app.run(host='0.0.0.0', port=3001, debug=True)
+    app.run(host=HOST, port=PORT, debug=DEBUG)
 
 
 if __name__ == '__main__':
