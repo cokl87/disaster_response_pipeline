@@ -28,7 +28,25 @@ logger.addHandler(logging.NullHandler())
 # --------------------------------------------------------------------------------------------------
 
 class CsvFileAction(argparse.Action):
+    """
+    argparse.Action for checking for existence and .csv-file type.
+    """
     def __call__(self, parser, namespace, values, option_string=None):
+        """
+        implementation of argparse.Action.__call__ method where the arguments are processed and
+        attached to namespace-object.
+
+        Parameters
+        ----------
+        parser: argparse.parser
+        namespace: argparse.namespace
+        values: list
+        option_string: str
+
+        Returns
+        -------
+        None
+        """
         # norming path:
         pth = os.path.abspath(values)
         # checking if existing file and correct filetype
@@ -46,7 +64,20 @@ class CsvFileAction(argparse.Action):
 
 
 def check_sqlite3(pth):
-    """ checks if user supplied a path to an existing sql3-database and norms it """
+    """
+    checks if user supplied a path to an existing sql3-database and norms it. If check failes
+    an ArgumentTypeError will be raised.
+
+    Parameters
+    ----------
+    pth: str
+        input argument which should represent path to sqlite3-db
+
+    Returns
+    -------
+    pth: str
+        normed absolute path to sqlite3-database
+    """
     # norming path:
     pth = os.path.abspath(pth)
     # checking if existing file and correct filetype
@@ -69,7 +100,20 @@ def check_sqlite3(pth):
 
 
 def check_csv(pth):
-    """ checks if user supplied a path to an existing file with a csv-extension and norms it """
+    """
+    checks if user supplied a path to an existing file with a '.csv'-extension and norms it. If
+    check failes and ArgumentTypeError will be raised.
+
+    Parameters
+    ----------
+    pth: str
+        input argument which should represent path to a csv-file
+
+    Returns
+    -------
+    apth: str
+        normed absolute path to csv-file
+    """
     logger.info('test')
     # norming path:
     apth = os.path.abspath(pth)
@@ -89,7 +133,20 @@ def check_csv(pth):
 
 
 def check_dir_existing(pth):
-    """ checks if path is or contains an existing directory and norms it """
+    """
+    checks if path is or contains an existing directory and norms it. If check fails an
+    ArgumentTypeError will be raised.
+
+    Parameters
+    ----------
+    pth: str
+        input argument which should represent path to a csv-file
+
+    Returns
+    -------
+    pth: str
+        normed, absolute path to file or dir.
+    """
     # norming path:
     pth = os.path.abspath(pth)
     # checking if existing file and correct filetype
