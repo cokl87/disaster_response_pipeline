@@ -11,7 +11,7 @@
 ## Project Motivation
  During a natural disasters usually a disaster-response-team can be faced with a lot of incoming messages requesting for different needs.
  The incoming messages needs to be classfied and handled to the right team which then deals with the specified issue (e.g. request for water).
- This classification needs alot of time and respurces in a time when all resources are needed for actuallly handling the disaster.
+ This classification needs alot of time and accures in a time when all resources are needed for actually handling the disaster.
  
  The usage of Natural Language Processing and Machine Leanrning can leverage this task and save resources which can then be used for handling the disaster.
  In this project therefor a ETL-Pipeline together with a NLP- and ML-pipeline were developed for performing this task.
